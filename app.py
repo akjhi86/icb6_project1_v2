@@ -21,49 +21,120 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────
+# 테마 설정 (사이드바 최상단)
+# ──────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### 🎨 테마 설정")
+    theme_mode = st.radio("테마 선택", ["Dark", "Light"], horizontal=True, label_visibility="collapsed")
+    st.divider()
+
+is_light = (theme_mode == "Light")
+
+# 테마별 색상 정의
+THEME = {
+    "bg": "#f6f8fa" if is_light else "#0d1117",
+    "surface": "#ffffff" if is_light else "#161b22",
+    "surface2": "#f3f4f6" if is_light else "#21262d",
+    "border": "#d0d7de" if is_light else "#30363d",
+    "text": "#1f2328" if is_light else "#e6edf3",
+    "text_sub": "#656d76" if is_light else "#8b949e",
+    "accent": "#0969da" if is_light else "#58a6ff",
+    "shadow": "rgba(31, 35, 40, 0.08)" if is_light else "rgba(0, 0, 0, 0.4)",
+}
+
+# 라이트 모드에서 형광색 시인성 확보를 위한 브랜드 색상 조정
+ADJUSTED_BRAND_COLORS = data["brand_colors"].copy()
+if is_light:
+    ADJUSTED_BRAND_COLORS = {
+        "더벤티": "#d12d2d",
+        "매머드커피": "#09a39a",
+        "메가커피": "#b18e00",
+        "빽다방": "#2e8b57",
+        "컴포즈커피": "#8a63d2",
+    }
+
+# ──────────────────────────────────────────────
 # 커스텀 CSS
 # ──────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <style>
 /* 전체 배경 */
-[data-testid="stAppViewContainer"] { background: #0d1117; }
-[data-testid="stSidebar"] { background: #161b22; }
+[data-testid="stAppViewContainer"] {{ background: {THEME["bg"]}; color: {THEME["text"]}; }}
+[data-testid="stSidebar"] {{ background: {THEME["surface"]}; border-right: 1px solid {THEME["border"]}; }}
+[data-testid="stHeader"] {{ background: rgba(0,0,0,0); }}
+
+/* 텍스트 색상 강제 적용 */
+h1, h2, h3, h4, h5, h6, p, span, label, div {{ color: {THEME["text"]}; }}
+.stMarkdown p {{ color: {THEME["text"]}; }}
 
 /* 헤더 */
-.main-header {
-    background: linear-gradient(135deg, #1a1f2e, #0d1117);
-    border: 1px solid #30363d;
+.main-header {{
+    background: {THEME["surface"]};
+    background-image: linear-gradient(135deg, {THEME["surface"]}, {THEME["bg"]});
+    border: 1px solid {THEME["border"]};
     border-radius: 12px;
     padding: 20px 28px;
     margin-bottom: 20px;
-}
-.main-header h1 {
+    box-shadow: 0 4px 12px {THEME["shadow"]};
+}}
+.main-header h1 {{
     font-size: 1.6rem; font-weight: 800;
-    background: linear-gradient(90deg, #58a6ff, #bc8cff);
+    background: linear-gradient(90deg, {THEME["accent"]}, #bc8cff);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     margin: 0;
-}
-.main-header p { color: #8b949e; margin: 4px 0 0; font-size: .85rem; }
+}}
+.main-header p {{ color: {THEME["text_sub"]}; margin: 4px 0 0; font-size: .85rem; }}
 
 /* 브랜드 카드 */
-.brand-card {
-    background: #161b22;
-    border: 1px solid #30363d;
+.brand-card {{
+    background: {THEME["surface"]};
+    border: 1px solid {THEME["border"]};
     border-radius: 10px;
     padding: 16px;
     text-align: center;
-}
-.brand-name { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
-.brand-val  { font-size: 1.8rem; font-weight: 900; }
-.brand-sub  { font-size: .72rem; color: #8b949e; }
+    box-shadow: 0 2px 8px {THEME["shadow"]};
+}}
+.brand-name {{ font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }}
+.brand-val  {{ font-size: 1.8rem; font-weight: 900; }}
+.brand-sub  {{ font-size: .72rem; color: {THEME["text_sub"]}; }}
 
 /* 메트릭 카드 */
-[data-testid="metric-container"] {
-    background: #161b22 !important;
-    border: 1px solid #30363d !important;
+[data-testid="metric-container"] {{
+    background: {THEME["surface"]} !important;
+    border: 1px solid {THEME["border"]} !important;
     border-radius: 10px !important;
     padding: 14px !important;
-}
+    box-shadow: 0 2px 6px {THEME["shadow"]} !important;
+}}
+
+/* 점수 설명 카드 */
+.stp-card {{
+    background: {THEME["surface2"]};
+    border-radius: 8px;
+    padding: 14px;
+    border-left: 3px solid var(--stp-color, {THEME["accent"]});
+    margin-bottom: 0;
+}}
+.stp-name  {{ font-size: .82rem; font-weight: 700; margin-bottom: 6px; }}
+.stp-formula {{
+    font-family: monospace;
+    font-size: .72rem;
+    background: {THEME["surface"]};
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    line-height: 1.6;
+    white-space: pre-line;
+    color: {THEME["text"]};
+}}
+.stp-note {{ font-size: .68rem; color: {THEME["text_sub"]}; line-height: 1.5; }}
+
+/* 지도 툴팁 스타일 수정 */
+.deckgl-tooltip {{
+    background: {THEME["surface"]} !important;
+    color: {THEME["text"]} !important;
+    border: 1px solid {THEME["border"]} !important;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -100,11 +171,12 @@ BRAND_STATS  = data["brand_stats"]
 
 # Plotly 공통 레이아웃
 PLOT_LAYOUT = dict(
-    paper_bgcolor="#161b22",
-    plot_bgcolor="#161b22",
-    font=dict(color="#e6edf3", family="Noto Sans KR"),
+    paper_bgcolor=THEME["surface"],
+    plot_bgcolor=THEME["surface"],
+    font=dict(color=THEME["text"], family="Noto Sans KR"),
     margin=dict(l=10, r=10, t=30, b=10),
 )
+GRID_STYLE = dict(gridcolor=THEME["border"], zerolinecolor=THEME["border"])
 
 # ──────────────────────────────────────────────
 # 헤더
@@ -119,7 +191,8 @@ st.markdown("""
 # ──────────────────────────────────────────────
 # 사이드바
 # ──────────────────────────────────────────────
-with st.sidebar:
+    st.divider()
+
     st.markdown("### 🔍 필터")
     selected_tab = st.radio(
         "분석 메뉴",
@@ -165,6 +238,19 @@ with st.sidebar:
     st.divider()
     st.caption(f"행정동 {len(df_dong)}개 · 매장 {len(df_map):,}개")
 
+    # 점수 계산 방법 설명 (항상 접근 가능)
+    with st.expander("❓ 점수 계산 방법"):
+        st.markdown("""
+**Min-Max 정규화(0~1)** 후 3가지 점수를 가중 합산합니다.
+
+| 점수 | 공식 | 의미 |
+|---|---|---|
+| 📈 **수요** | (정규화_매출×0.5 + 정규화_종사자×0.5)×100 | 높을수록 ↑ |
+| ⚔️ **경쟁** | (1 − 정규화_카페수)×100 | 카페 적을수록 ↑ |
+| 💰 **비용** | (1 − 정규화_부동산가)×100 | 임대료 낮을수록 ↑ |
+| ⭐ **매력도** | 수요×0.4 + 경쟁×0.3 + 비용×0.3 | 종합 입지 지수 |
+        """)
+
 # ══════════════════════════════════════════════
 # 탭 1: 브랜드 개요
 # ══════════════════════════════════════════════
@@ -174,7 +260,7 @@ if selected_tab == "📊 브랜드 개요":
     cols = st.columns(5)
     for i, brand in enumerate(BRANDS):
         s = BRAND_STATS[brand]
-        color = BRAND_COLORS[brand]
+        color = ADJUSTED_BRAND_COLORS[brand]
         with cols[i]:
             avg = s.get('avg_monthly_sales', 0)
             avg_str = f"{avg:,}만" if avg else '-'
@@ -207,10 +293,9 @@ if selected_tab == "📊 브랜드 개요":
             text=[BRAND_STATS[b]["total_stores"] for b in BRANDS],
             textposition="outside",
         ))
-        fig.update_layout(**PLOT_LAYOUT, height=300,
-            xaxis=dict(gridcolor="#21262d"),
-            yaxis=dict(gridcolor="#21262d"),
-        )
+        fig.update_layout(**PLOT_LAYOUT, height=300)
+        fig.update_xaxes(**GRID_STYLE)
+        fig.update_yaxes(**GRID_STYLE)
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -242,10 +327,10 @@ if selected_tab == "📊 브랜드 개요":
             ))
     fig.update_layout(
         **PLOT_LAYOUT, barmode="stack", height=350,
-        xaxis=dict(tickangle=-40, gridcolor="#21262d"),
-        yaxis=dict(gridcolor="#21262d"),
         legend=dict(orientation="h", y=1.05),
     )
+    fig.update_xaxes(tickangle=-40, **GRID_STYLE)
+    fig.update_yaxes(**GRID_STYLE)
     st.plotly_chart(fig, use_container_width=True)
 
     # 차트 행 3: 연령대별 매출
@@ -261,11 +346,49 @@ if selected_tab == "📊 브랜드 개요":
         text=[f"{v:.0f}억" for v in age_totals],
         textposition="outside",
     ))
-    fig.update_layout(**PLOT_LAYOUT, height=300,
-        xaxis=dict(gridcolor="#21262d"),
-        yaxis=dict(title="매출(억원)", gridcolor="#21262d"),
-    )
+    fig.update_layout(**PLOT_LAYOUT, height=300)
+    fig.update_xaxes(**GRID_STYLE)
+    fig.update_yaxes(title="매출(억원)", **GRID_STYLE)
     st.plotly_chart(fig, use_container_width=True)
+
+    # ── 점수 계산 방법 설명 ──
+    st.markdown("---")
+    st.markdown("#### 📐 평가 지수 계산 방법")
+    st.caption("서울 행정동별 데이터를 **Min-Max 정규화(0~1)** 한 후, 수요 · 경쟁 · 비용 점수를 가중 합산하여 종합 매력도 지수를 산출합니다.")
+
+    sc1, sc2, sc3, sc4 = st.columns(4)
+    with sc1:
+        st.markdown("""
+        <div class="stp-card" style="--stp-color:#4ECDC4">
+          <div class="stp-name" style="color:#4ECDC4">📈 수요 점수</div>
+          <div class="stp-formula">(정규화_매출 × 0.5\n+ 정규화_종사자 × 0.5)\n× 100</div>
+          <div class="stp-note">월매출 + 종사자수를 동등 반영. 높을수록 ↑</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with sc2:
+        st.markdown("""
+        <div class="stp-card" style="--stp-color:#FFE66D">
+          <div class="stp-name" style="color:#FFE66D">⚔️ 경쟁 점수</div>
+          <div class="stp-formula">(1 − 정규화_카페수)\n× 100</div>
+          <div class="stp-note">카페 수 적을수록 ↑ (반비례)</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with sc3:
+        st.markdown("""
+        <div class="stp-card" style="--stp-color:#A8E6CF">
+          <div class="stp-name" style="color:#A8E6CF">💰 비용 점수</div>
+          <div class="stp-formula">(1 − 정규화_부동산가)\n× 100</div>
+          <div class="stp-note">m² 당 부동산가 낮을수록 ↑ (반비례)</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with sc4:
+        st.markdown("""
+        <div class="stp-card" style="--stp-color:#58a6ff">
+          <div class="stp-name" style="color:#58a6ff">⭐ 종합 매력도</div>
+          <div class="stp-formula">수요 × 0.4\n+ 경쟁 × 0.3\n+ 비용 × 0.3</div>
+          <div class="stp-note">유동인구 많고 · 경쟁 적고 · 임대료 저렴할수록 ↑</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════
@@ -301,13 +424,13 @@ elif selected_tab == "🗺️ 지도":
             auto_highlight=True,
         )
         view = pdk.ViewState(latitude=37.5665, longitude=126.9780, zoom=10.5, pitch=0)
-        tooltip = {"html": "<b>{brand}</b><br>{name}", "style": {"background": "#21262d", "color": "#e6edf3"}}
+        tooltip = {"html": "<b>{brand}</b><br>{name}", "style": {"background": THEME["surface"], "color": THEME["text"]}}
 
         st.pydeck_chart(pdk.Deck(
             layers=[layer],
             initial_view_state=view,
             tooltip=tooltip,
-            map_style="mapbox://styles/mapbox/dark-v10",
+            map_style="mapbox://styles/mapbox/light-v10" if is_light else "mapbox://styles/mapbox/dark-v10",
         ))
 
         # 브랜드별 매장 수 요약
@@ -426,10 +549,9 @@ elif selected_tab == "🏙️ 행정동 분석":
                 y=age_vals,
                 marker_color=["#FF6B6B","#FFE66D","#4ECDC4","#58a6ff","#bc8cff","#A8E6CF"],
             ))
-            fig.update_layout(**PLOT_LAYOUT, height=220,
-                xaxis=dict(gridcolor="#21262d"),
-                yaxis=dict(title="백만원", gridcolor="#21262d"),
-            )
+            fig.update_layout(**PLOT_LAYOUT, height=220)
+            fig.update_xaxes(**GRID_STYLE)
+            fig.update_yaxes(title="백만원", **GRID_STYLE)
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("👆 테이블에서 행을 클릭하면 상세 정보가 표시됩니다.")

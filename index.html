@@ -17,6 +17,7 @@
 
   <style>
     :root {
+      /* 다크 모드 (기본) */
       --bg: #0d1117;
       --surface: #161b22;
       --surface2: #21262d;
@@ -24,11 +25,32 @@
       --text: #e6edf3;
       --text-sub: #8b949e;
       --accent: #58a6ff;
+      --shadow: rgba(0, 0, 0, 0.4);
       --더벤티: #FF6B6B;
       --매머드커피: #4ECDC4;
       --메가커피: #FFE66D;
       --빽다방: #A8E6CF;
       --컴포즈커피: #C3A6FF;
+      --brand-shadow: none;
+    }
+
+    body.light-theme {
+      /* 라이트 모드 */
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface2: #f3f4f6;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-sub: #656d76;
+      --accent: #0969da;
+      --shadow: rgba(31, 35, 40, 0.08);
+      /* 라이트 모드에서 형광색 시인성 확보를 위해 채도/명도 약간 조정 */
+      --더벤티: #d12d2d;
+      --매머드커피: #09a39a;
+      --메가커피: #b18e00;
+      --빽다방: #2e8b57;
+      --컴포즈커피: #8a63d2;
+      --brand-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     * {
@@ -48,25 +70,28 @@
 
     /* ── 헤더 ── */
     header {
-      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      background: var(--surface);
+      background-image: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
       border-bottom: 1px solid var(--border);
       padding: 16px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 12px;
       position: sticky;
       top: 0;
       z-index: 1000;
+      box-shadow: 0 4px 12px var(--shadow);
     }
 
     header h1 {
       font-size: 1.4rem;
       font-weight: 700;
-      background: linear-gradient(90deg, #58a6ff, #bc8cff);
+      background: linear-gradient(90deg, var(--accent), #bc8cff);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      text-shadow: var(--brand-shadow);
     }
 
     header p {
@@ -321,9 +346,10 @@
     }
 
     .brand-card .brand-name {
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: 700;
       margin-bottom: 12px;
+      text-shadow: var(--brand-shadow);
     }
 
     .brand-card .stat {
@@ -405,6 +431,8 @@
 
     .brand-filter-btn.active {
       border-color: currentColor;
+      background: var(--surface);
+      box-shadow: 0 2px 8px var(--shadow);
     }
 
     .brand-filter-btn .dot {
@@ -789,7 +817,13 @@
       <h1>☕ 서울 저가 커피 브랜드 입지 분석</h1>
       <p>행정동별 브랜드 현황 · 매출 분석 · 입지 추천</p>
     </div>
-    <div class="header-badges" id="headerBadges"></div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button id="themeToggle" class="badge"
+        style="cursor: pointer; background: var(--surface2); border-color: var(--border); color: var(--text);">
+        🌙 다크 모드
+      </button>
+      <div class="header-badges" id="headerBadges"></div>
+    </div>
   </header>
 
   <!-- ── 탭 네비 ── -->
@@ -1024,6 +1058,45 @@
   </main>
 
   <script>
+    // ══════════════════════════════════════════════
+    //  테마 전환 로직
+    // ══════════════════════════════════════════════
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    // 저장된 테마 불러오기
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+      body.classList.add('light-theme');
+      themeToggle.innerText = '🌞 라이트 모드';
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const isLight = body.classList.toggle('light-theme');
+      const theme = isLight ? 'light' : 'dark';
+      localStorage.setItem('theme', theme);
+      themeToggle.innerText = isLight ? '🌞 라이트 모드' : '🌙 다크 모드';
+
+      // 차트 색상 업데이트
+      updateChartColors(isLight);
+    });
+
+    function updateChartColors(isLight) {
+      const textColor = isLight ? '#1f2328' : '#e6edf3';
+      const gridColor = isLight ? '#d0d7de' : '#30363d';
+
+      // Chart.js 글로벌 설정 업데이트 (기존 차트는 수동 업데이트 필요)
+      if (window.Chart) {
+        Chart.defaults.color = textColor;
+        Chart.defaults.borderColor = gridColor;
+        // 페이지 전체 차트 인스턴스 순회하며 업데이트 (필요 시)
+      }
+
+      // 이미 생성된 차트들은 다시 로드 시 반영되지만, 
+      // 실시간 업데이트를 위해 re-init 혹은 update 호출이 필요합니다.
+      if (DATA) init();
+    }
+
     // ══════════════════════════════════════════════
     //  점수 설명 툴팁 토글
     // ══════════════════════════════════════════════
