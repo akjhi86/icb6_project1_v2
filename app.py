@@ -21,6 +21,37 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────
+# 데이터 로드
+# ──────────────────────────────────────────────
+@st.cache_data
+def load_data():
+    """dashboard_data.json 로드 (캐시)"""
+    json_path = os.path.join(os.path.dirname(__file__), "dashboard_data.json")
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # 행정동 DataFrame
+    df_dong = pd.DataFrame(data["dong_data"])
+    # 브랜드 컬럼 분리
+    brands_df = pd.json_normalize(df_dong["brands"])
+    brands_df.columns = [f"cnt_{c}" for c in brands_df.columns]
+    df_dong = pd.concat([df_dong.drop(columns=["brands"]), brands_df], axis=1)
+
+    # 지도 포인트 DataFrame
+    df_map = pd.DataFrame(data["map_points"])
+
+    # 추천 DataFrame
+    df_rec = pd.DataFrame(data["recommend_top"])
+
+    return data, df_dong, df_map, df_rec
+
+data, df_dong, df_map, df_rec = load_data()
+
+BRANDS      = data["brands"]
+BRAND_COLORS = data["brand_colors"]
+BRAND_STATS  = data["brand_stats"]
+
+# ──────────────────────────────────────────────
 # 테마 설정 (사이드바 최상단)
 # ──────────────────────────────────────────────
 with st.sidebar:
@@ -139,37 +170,8 @@ h1, h2, h3, h4, h5, h6, p, span, label, div {{ color: {THEME["text"]}; }}
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
-# 데이터 로드
-# ──────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    """dashboard_data.json 로드 (캐시)"""
-    json_path = os.path.join(os.path.dirname(__file__), "dashboard_data.json")
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    # 행정동 DataFrame
-    df_dong = pd.DataFrame(data["dong_data"])
-    # 브랜드 컬럼 분리
-    brands_df = pd.json_normalize(df_dong["brands"])
-    brands_df.columns = [f"cnt_{c}" for c in brands_df.columns]
-    df_dong = pd.concat([df_dong.drop(columns=["brands"]), brands_df], axis=1)
-
-    # 지도 포인트 DataFrame
-    df_map = pd.DataFrame(data["map_points"])
-
-    # 추천 DataFrame
-    df_rec = pd.DataFrame(data["recommend_top"])
-
-    return data, df_dong, df_map, df_rec
-
-data, df_dong, df_map, df_rec = load_data()
-
-BRANDS      = data["brands"]
-BRAND_COLORS = data["brand_colors"]
-BRAND_STATS  = data["brand_stats"]
-
 # Plotly 공통 레이아웃
+# ──────────────────────────────────────────────
 PLOT_LAYOUT = dict(
     paper_bgcolor=THEME["surface"],
     plot_bgcolor=THEME["surface"],
@@ -191,6 +193,7 @@ st.markdown("""
 # ──────────────────────────────────────────────
 # 사이드바
 # ──────────────────────────────────────────────
+with st.sidebar:
     st.divider()
 
     st.markdown("### 🔍 필터")
