@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>서울 저가 커피 브랜드 입지 분석 대시보드</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
+    rel="stylesheet" />
+  <!-- Leaflet (지도) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-sub: #8b949e;
+      --accent: #58a6ff;
+      --더벤티: #FF6B6B;
+      --매머드커피: #4ECDC4;
+      --메가커피: #FFE66D;
+      --빽다방: #A8E6CF;
+      --컴포즈커피: #C3A6FF;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      /* 가로 스크롤 방지 */
+      overflow-x: hidden;
+    }
+
+    /* ── 헤더 ── */
+    header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #58a6ff, #bc8cff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      border: 1px solid;
+    }
+
+    /* ── 탭 네비 ── */
+    /* ── nav 래퍼: 탭 스크롤 영역 + 버튼 고정 ── */
+    .nav-wrap {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: stretch;
+      position: relative;
+    }
+
+    /* 탭 버튼들만 스크롤 */
+    .nav-tabs {
+      display: flex;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex: 1;
+      min-width: 0;
+      padding-left: 32px;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    nav {
+      display: contents;
+    }
+
+
+    /* ── 점수 설명 툴팁 버튼 ── */
+    .score-info-btn {
+      /* nav-wrap 안에서 항상 오른쪽에 고정 */
+      flex-shrink: 0;
+      align-self: center;
+      margin: 0 16px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-sub);
+      font-size: 0.76rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .score-info-btn:hover,
+    .score-info-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── 드롭다운 툴팁 패널 (fixed로 화면 기준 위치) ── */
+    .score-tooltip-panel {
+      display: none;
+      position: fixed;
+      right: 16px;
+      z-index: 2000;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      width: min(700px, calc(100vw - 32px));
+      box-shadow: 0 16px 48px rgba(0, 0, 0, .55);
+      animation: fadeDown .15s ease;
+    }
+
+    @keyframes fadeDown {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .score-tooltip-panel.open {
+      display: block;
+    }
+
+    .stp-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .stp-sub {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+
+    .stp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      gap: 10px;
+    }
+
+    .stp-card {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      border-left: 3px solid var(--stp-color, var(--accent));
+    }
+
+    .stp-card .stp-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--stp-color, var(--accent));
+      margin-bottom: 7px;
+    }
+
+    .stp-card .stp-formula {
+      font-family: monospace;
+      font-size: 0.71rem;
+      color: var(--text);
+      line-height: 1.65;
+      margin-bottom: 7px;
+      white-space: pre-line;
+    }
+
+    .stp-card .stp-note {
+      font-size: 0.68rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+    }
+
+    .tab-btn {
+      padding: 14px 22px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── 메인 레이아웃 ── */
+    main {
+      padding: 20px 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+      /* 내부 콘텐츠가 바깥으로 나가지 않도록 */
+      min-width: 0;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* ── 카드 ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+    }
+
+    .card h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ── 개요 탭 ── */
+    .overview-grid {
+      display: grid;
+      /* 브라운드 컨테이너 너비에 맞게 자동 조정 */
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .brand-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      transition: transform .2s, box-shadow .2s;
+      cursor: pointer;
+    }
+
+    .brand-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+    }
+
+    .brand-card.selected {
+      border-color: var(--accent);
+    }
+
+    .brand-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .brand-card .brand-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .brand-card .stat {
+      margin-bottom: 6px;
+    }
+
+    .brand-card .stat-val {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .brand-card .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-sub);
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+      /* 각 카드가 최소 너비를 유지하도록 */
+      min-width: 0;
+    }
+
+    .charts-row>* {
+      min-width: 0;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    /* ── 지도 탭 ── */
+    .map-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+      height: calc(100vh - 180px);
+      min-height: 400px;
+    }
+
+    .map-sidebar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .map-sidebar h3 {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      margin-bottom: 12px;
+    }
+
+    #map {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      height: 100%;
+    }
+
+    .brand-filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.82rem;
+      transition: all .15s;
+      width: 100%;
+    }
+
+    .brand-filter-btn.active {
+      border-color: currentColor;
+    }
+
+    .brand-filter-btn .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .brand-filter-btn .count {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+
+    /* ── 행정동 분석 탭 ── */
+    .dong-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      /* 자녀 요소가 바깥으로 나가지 않도록 */
+      min-width: 0;
+    }
+
+    .dong-layout>* {
+      min-width: 0;
+    }
+
+    .dong-table-wrap {
+      overflow-x: auto;
+      /* 테이블이 너무 넓으면 내부 스크롤만 생김 */
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th {
+      background: var(--surface2);
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-sub);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    th:hover {
+      color: var(--text);
+    }
+
+    td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(48, 54, 61, .5);
+    }
+
+    tr:hover td {
+      background: var(--surface2);
+    }
+
+    .brand-pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin: 1px;
+    }
+
+    .score-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .score-bar-inner {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* ── 입지 추천 탭 ── */
+    .recommend-filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .recommend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+    }
+
+    .rec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      transition: transform .15s;
+    }
+
+    .rec-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .rec-card .rec-rank {
+      font-size: 0.7rem;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .rec-card .rec-dong {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .rec-card .rec-brand {
+      font-size: 0.8rem;
+      margin-bottom: 12px;
+    }
+
+    .rec-card .rec-scores {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .rec-score-item {
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 8px;
+    }
+
+    .rec-score-item .label {
+      font-size: 0.68rem;
+      color: var(--text-sub);
+      margin-bottom: 2px;
+    }
+
+    .rec-score-item .value {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    /* ── 공통 유틸 ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      color: var(--text-sub);
+      font-size: 0.9rem;
+    }
+
+    .search-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      /* 고정 너비 제거 → 반응형 */
+      width: 100%;
+      max-width: 240px;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* ── 점수 설명 섹션 ── */
+    .score-guide {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .score-guide-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .score-guide-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--sg-color, var(--accent));
+    }
+
+    .score-guide-card .sg-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--sg-color, var(--accent));
+      margin-bottom: 10px;
+    }
+
+    .score-guide-card .sg-formula {
+      background: var(--surface);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .score-guide-card .sg-desc {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      line-height: 1.7;
+    }
+
+    .score-guide-card .sg-source {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 0.7rem;
+      color: var(--text-sub);
+    }
+
+    .score-guide-card .sg-source span {
+      display: inline-block;
+      background: var(--surface);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin: 2px 2px 0 0;
+    }
+
+
+    /* ──────────────────────────────────────────────────────
+       반응형 미디어 쿼리 ─ 1100px 이하 (태블릿)
+    ────────────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .charts-row {
+        grid-template-columns: 1fr;
+      }
+
+      .dong-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .map-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+      }
+
+      .map-sidebar {
+        /* 사이드바가 위로 올라오면 가로 스크롤 없이 펼쳐짐 */
+        max-height: 220px;
+      }
+
+      #map {
+        height: 50vh;
+        min-height: 300px;
+      }
+    }
+
+    /* ──────────────────────────────────────────────────────
+       반응형 미디어 쿼리 ─ 768px 이하 (모바일 가로)
+    ────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      main {
+        padding: 14px 16px;
+      }
+
+      header {
+        padding: 12px 16px;
+      }
+
+      header h1 {
+        font-size: 1.1rem;
+      }
+
+      /* 탭 네비가 스크롤 없이 전체 표시 */
+      nav {
+        padding: 0 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .tab-btn {
+        padding: 12px 14px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .overview-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .recommend-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-input {
+        max-width: 100%;
+      }
+
+      .filter-select {
+        width: 100%;
+      }
+    }
+
+    /* ──────────────────────────────────────────────────────
+       반응형 미디어 쿼리 ─ 480px 이하 (모바일 세로)
+    ────────────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .overview-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-card .stat-val {
+        font-size: 1.2rem;
+      }
+
+      .chart-wrap {
+        height: 220px;
+      }
+
+      .header-badges {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── 헤더 ── -->
+  <header>
+    <div>
+      <h1>☕ 서울 저가 커피 브랜드 입지 분석</h1>
+      <p>행정동별 브랜드 현황 · 매출 분석 · 입지 추천</p>
+    </div>
+    <div class="header-badges" id="headerBadges"></div>
+  </header>
+
+  <!-- ── 탭 네비 ── -->
+  <div class="nav-wrap">
+    <nav>
+      <div class="nav-tabs">
+        <button class="tab-btn active" data-tab="overview">📊 브랜드 개요</button>
+        <button class="tab-btn" data-tab="map">🗺️ 지도</button>
+        <button class="tab-btn" data-tab="dong">🏙️ 행정동 분석</button>
+        <button class="tab-btn" data-tab="recommend">⭐ 입지 추천</button>
+      </div>
+    </nav>
+
+    <!-- 항상 오른쪽에 고정되는 툴팁 버튼 -->
+    <button class="score-info-btn" id="scoreInfoBtn">❓ 점수 계산 방법</button>
+
+    <!-- 드롭다운 툴팁 패널 -->
+    <div class="score-tooltip-panel" id="scoreTooltipPanel">
+      <div class="stp-title">📐 평가 지수 계산 방법</div>
+      <div class="stp-sub">
+        서울 행정동별 데이터를 <strong style="color:var(--text)">Min-Max 정규화(0~1)</strong>한 후,
+        수요 · 경쟁 · 비용 점수를 가중 합산하여 종합 매력도 지수를 산출합니다.
+      </div>
+      <div class="stp-grid">
+        <div class="stp-card" style="--stp-color:#4ECDC4">
+          <div class="stp-name">📈 수요 점수</div>
+          <div class="stp-formula">(정규화_매출 × 0.5
+            + 정규화_종사자 × 0.5)
+            × 100</div>
+          <div class="stp-note">월매출 + 종사자수를 동등 반영. 높을수록 ↑</div>
+        </div>
+        <div class="stp-card" style="--stp-color:#FFE66D">
+          <div class="stp-name">⚔️ 경쟁 점수</div>
+          <div class="stp-formula">(1 − 정규화_카페수)
+            × 100</div>
+          <div class="stp-note">카페 수 적을수록 ↑ (반비례)</div>
+        </div>
+        <div class="stp-card" style="--stp-color:#A8E6CF">
+          <div class="stp-name">💰 비용 점수</div>
+          <div class="stp-formula">(1 − 정규화_부동산가)
+            × 100</div>
+          <div class="stp-note">m² 당 부동산가 낮을수록 ↑ (반비례)</div>
+        </div>
+        <div class="stp-card" style="--stp-color:#58a6ff">
+          <div class="stp-name">⭐ 종합 매력도</div>
+          <div class="stp-formula">수요 × 0.4
+            + 경쟁 × 0.3
+            + 비용 × 0.3</div>
+          <div class="stp-note">유동인구 많고 · 경쟁 적고 · 임대료 저렴할수록 ↑</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <main>
+    <!-- ── 탭 1: 브랜드 개요 ── -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="overview-grid" id="brandCards"></div>
+      <div class="charts-row">
+        <div class="card">
+          <h3>브랜드별 매장 수</h3>
+          <div class="chart-wrap"><canvas id="chartBrandCount"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>브랜드별 진출 행정동 수</h3>
+          <div class="chart-wrap"><canvas id="chartDongCount"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="card">
+          <h3>행정동별 브랜드 분포 (상위 30개 동)</h3>
+          <div class="chart-wrap" style="height:320px"><canvas id="chartTopDong"></canvas></div>
+        </div>
+        <div class="card">
+          <h3>연령대별 매출 구성</h3>
+          <div class="chart-wrap"><canvas id="chartAge"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ── 점수 계산 방법 설명 ── -->
+      <div class="card" style="margin-top:20px">
+        <h3>📐 평가 지수 계산 방법</h3>
+        <p style="font-size:.8rem;color:var(--text-sub);margin-bottom:16px;line-height:1.7">
+          서울 행정동별 데이터를 수집하여 <strong style="color:var(--text)">Min-Max 정규화(0~1)</strong>를 적용한 후,
+          수요 · 경쟁 · 비용 3가지 점수를 가중 합산하여 종합 매력도 지수를 산출합니다.
+        </p>
+        <div class="score-guide">
+
+          <div class="score-guide-card" style="--sg-color:#4ECDC4">
+            <div class="sg-title">📈 수요 점수</div>
+            <div class="sg-formula">수요 = (정규화_매출 × 0.5
+              + 정규화_종사자수 × 0.5) × 100</div>
+            <div class="sg-desc">
+              월 매출과 종사자(유동인구)를 동등하게 반영합니다.
+              두 지표가 모두 높을수록 점수가 올라갑니다.
+            </div>
+            <div class="sg-source">데이터 소스:
+              <span>월 매출 금액</span>
+              <span>2024 총 종사자수</span>
+            </div>
+          </div>
+
+          <div class="score-guide-card" style="--sg-color:#FFE66D">
+            <div class="sg-title">⚔️ 경쟁 점수</div>
+            <div class="sg-formula">경쟁 = (1 − 정규화_카페수) × 100</div>
+            <div class="sg-desc">
+              해당 행정동의 전체 카페 수가 적을수록
+              경쟁이 낮아 점수가 높아집니다. (반비례)
+            </div>
+            <div class="sg-source">데이터 소스:
+              <span>전체 카페 수</span>
+            </div>
+          </div>
+
+          <div class="score-guide-card" style="--sg-color:#A8E6CF">
+            <div class="sg-title">💰 비용 점수</div>
+            <div class="sg-formula">비용 = (1 − 정규화_부동산가격) × 100</div>
+            <div class="sg-desc">
+              m² 당 평균 부동산 거래가격이 낮을수록
+              임대료 부담이 적어 점수가 높아집니다. (반비례)
+            </div>
+            <div class="sg-source">데이터 소스:
+              <span>부동산 실거래가</span>
+              <span>전용면적(m²)</span>
+            </div>
+          </div>
+
+          <div class="score-guide-card" style="--sg-color:#58a6ff">
+            <div class="sg-title">⭐ 종합 매력도 지수</div>
+            <div class="sg-formula">매력도 = 수요 × 0.4
+              + 경쟁 × 0.3
+              + 비용 × 0.3</div>
+            <div class="sg-desc">
+              수요 40% + 경쟁 30% + 비용 30% 가중치로 합산한
+              <strong style="color:var(--text)">종합 입지 지수(0~100점)</strong>입니다.
+              점수가 높을수록 "유동인구는 많고, 경쟁은 적고, 임대료는 저렴한" 입지를 의미합니다.
+            </div>
+            <div class="sg-source">정규화 방식:
+              <span>Min-Max (0~1)</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── 탭 2: 지도 ── -->
+    <div class="tab-panel" id="tab-map">
+      <div class="map-layout">
+        <div class="map-sidebar">
+          <h3>브랜드 필터</h3>
+          <div id="brandFilters"></div>
+          <hr style="border-color:var(--border);margin:14px 0">
+          <h3>범례</h3>
+          <p style="font-size:.75rem;color:var(--text-sub);line-height:1.6">
+            지도에서 마커를 클릭하면 매장 정보를 확인할 수 있습니다.
+          </p>
+          <hr style="border-color:var(--border);margin:14px 0">
+          <div id="mapStats" style="font-size:.8rem;color:var(--text-sub)"></div>
+        </div>
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- ── 탭 3: 행정동 분석 ── -->
+    <div class="tab-panel" id="tab-dong">
+      <div class="dong-layout">
+        <div class="card">
+          <div class="toolbar">
+            <input class="search-input" id="dongSearch" placeholder="🔍 행정동 검색..." />
+            <select class="filter-select" id="dongBrandFilter">
+              <option value="">전체 브랜드</option>
+            </select>
+            <select class="filter-select" id="dongSortBy">
+              <option value="total_brand_count">총 브랜드 수</option>
+              <option value="attractiveness_score">매력도 점수</option>
+              <option value="monthly_sales">월 매출</option>
+              <option value="total_workers">근로자 수</option>
+            </select>
+          </div>
+          <div class="dong-table-wrap">
+            <table id="dongTable">
+              <thead>
+                <tr>
+                  <th>행정동</th>
+                  <th>더벤티</th>
+                  <th>매머드</th>
+                  <th>메가</th>
+                  <th>빽다방</th>
+                  <th>컴포즈</th>
+                  <th>합계</th>
+                  <th>매력도</th>
+                  <th>월매출(억)</th>
+                  <th>평균매출(만)</th>
+                </tr>
+              </thead>
+              <tbody id="dongTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="card" id="dongDetail" style="margin-bottom:14px">
+            <h3>행정동 상세</h3>
+            <p style="color:var(--text-sub);font-size:.82rem">테이블에서 행을 클릭하세요</p>
+          </div>
+          <div class="card">
+            <h3>선택 동 연령대별 매출</h3>
+            <div class="chart-wrap" style="height:220px"><canvas id="chartDongAge"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 탭 4: 입지 추천 ── -->
+    <div class="tab-panel" id="tab-recommend">
+      <div class="recommend-filters">
+        <select class="filter-select" id="recBrandFilter">
+          <option value="">전체 브랜드</option>
+        </select>
+        <select class="filter-select" id="recSortFilter">
+          <option value="attractiveness_score">매력도 점수 순</option>
+          <option value="demand_score">수요 점수 순</option>
+          <option value="cost_score">비용 점수 순</option>
+        </select>
+        <input class="search-input" id="recSearch" placeholder="🔍 행정동 검색..." />
+        <span style="color:var(--text-sub);font-size:.82rem;margin-left:auto" id="recCount"></span>
+      </div>
+      <div class="recommend-grid" id="recommendGrid"></div>
+    </div>
+  </main>
+
+  <script>
+    // ══════════════════════════════════════════════
+    //  점수 설명 툴팁 토글
+    // ══════════════════════════════════════════════
+    const scoreInfoBtn = document.getElementById('scoreInfoBtn');
+    const scoreTooltipPanel = document.getElementById('scoreTooltipPanel');
+
+    scoreInfoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = scoreTooltipPanel.classList.toggle('open');
+      scoreInfoBtn.classList.toggle('active', isOpen);
+      if (isOpen) {
+        // 버튼 바로 아래에 패널 위치 계산 (fixed 기준)
+        const rect = scoreInfoBtn.getBoundingClientRect();
+        scoreTooltipPanel.style.top = (rect.bottom + 6) + 'px';
+      }
+    });
+
+    // 패널 외부 클릭 시 닫기
+    document.addEventListener('click', (e) => {
+      if (!scoreTooltipPanel.contains(e.target) && e.target !== scoreInfoBtn) {
+        scoreTooltipPanel.classList.remove('open');
+        scoreInfoBtn.classList.remove('active');
+      }
+    });
+
+
+    // ══════════════════════════════════════════════
+    //  데이터 로드 및 초기화
+    // ══════════════════════════════════════════════
+    let DATA = null;
+    let leafletMap = null;
+    let markerLayers = {};
+    let activeFilters = new Set();
+    let dongAgeChart = null;
+
+
+    async function loadData() {
+      const res = await fetch('dashboard_data.json');
+      DATA = await res.json();
+      init();
+    }
+
+    function init() {
+      setupTabs();
+      renderHeader();
+      renderBrandCards();
+      renderOverviewCharts();
+      renderDongTable();
+      renderRecommend();
+      setupBrandFilters();
+      // 지도는 탭 전환 시 초기화
+    }
+
+    // ══════════════════════════════════════════════
+    //  탭 전환
+    // ══════════════════════════════════════════════
+    function setupTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          const panel = document.getElementById('tab-' + btn.dataset.tab);
+          panel.classList.add('active');
+          if (btn.dataset.tab === 'map' && !leafletMap) initMap();
+        });
+      });
+    }
+
+    // ══════════════════════════════════════════════
+    //  헤더 배지
+    // ══════════════════════════════════════════════
+    function renderHeader() {
+      const total = DATA.map_points.length;
+      const dongs = DATA.dong_data.length;
+      const html = `
+    <span class="badge" style="color:#58a6ff;border-color:#58a6ff30;background:#58a6ff10">
+      🏙️ ${dongs}개 행정동
+    </span>
+    <span class="badge" style="color:#bc8cff;border-color:#bc8cff30;background:#bc8cff10">
+      ☕ ${total.toLocaleString()}개 매장
+    </span>
+  `;
+      document.getElementById('headerBadges').innerHTML = html;
+    }
+
+    // ══════════════════════════════════════════════
+    //  브랜드 카드 (개요 탭)
+    // ══════════════════════════════════════════════
+    function renderBrandCards() {
+      const container = document.getElementById('brandCards');
+      container.innerHTML = DATA.brands.map(brand => {
+        const s = DATA.brand_stats[brand];
+        const color = DATA.brand_colors[brand];
+        // 점포당 평균 월매출 (만원 단위)
+        const avgStr = s.avg_monthly_sales ? s.avg_monthly_sales.toLocaleString() + '만' : '-';
+        return `
+      <div class="brand-card" style="--brand-color:${color}">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color};border-radius:12px 12px 0 0"></div>
+        <div class="brand-name" style="color:${color}">${brand}</div>
+        <div class="stat">
+          <div class="stat-val">${s.total_stores.toLocaleString()}</div>
+          <div class="stat-label">총 매장 수</div>
+        </div>
+        <div class="stat" style="margin-top:8px">
+          <div class="stat-val" style="font-size:1.1rem">${s.dong_count}</div>
+          <div class="stat-label">진출 행정동</div>
+        </div>
+        <div class="stat" style="margin-top:8px">
+          <div class="stat-val" style="font-size:1.1rem;color:${color}">${avgStr}</div>
+          <div class="stat-label">점포당 평균월매출</div>
+        </div>
+      </div>
+    `;
+      }).join('');
+    }
+
+    // ══════════════════════════════════════════════
+    //  개요 차트들
+    // ══════════════════════════════════════════════
+    function renderOverviewCharts() {
+      const brands = DATA.brands;
+      const colors = brands.map(b => DATA.brand_colors[b]);
+
+      // 1) 브랜드별 매장 수
+      new Chart(document.getElementById('chartBrandCount'), {
+        type: 'bar',
+        data: {
+          labels: brands,
+          datasets: [{
+            data: brands.map(b => DATA.brand_stats[b].total_stores),
+            backgroundColor: colors,
+            borderRadius: 6,
+          }]
+        },
+        options: chartOpts('매장 수')
+      });
+
+      // 2) 브랜드별 진출 행정동 수
+      new Chart(document.getElementById('chartDongCount'), {
+        type: 'doughnut',
+        data: {
+          labels: brands,
+          datasets: [{
+            data: brands.map(b => DATA.brand_stats[b].dong_count),
+            backgroundColor: colors,
+            borderWidth: 0,
+            hoverOffset: 8,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#8b949e', font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}개 동` } }
+          }
+        }
+      });
+
+      // 3) 상위 30개 동 브랜드 분포 (누적 막대)
+      const sorted = [...DATA.dong_data]
+        .filter(d => d.total_brand_count > 0)
+        .sort((a, b) => b.total_brand_count - a.total_brand_count)
+        .slice(0, 30);
+
+      new Chart(document.getElementById('chartTopDong'), {
+        type: 'bar',
+        data: {
+          labels: sorted.map(d => d.dong_name),
+          datasets: brands.map((brand, i) => ({
+            label: brand,
+            data: sorted.map(d => d.brands[brand] || 0),
+            backgroundColor: colors[i],
+            borderRadius: i === brands.length - 1 ? { topLeft: 4, topRight: 4 } : 0,
+          }))
+        },
+        options: {
+          ...chartOpts('매장 수'),
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: '#8b949e', font: { size: 9 }, maxRotation: 45 },
+              grid: { color: '#21262d' }
+            },
+            y: { stacked: true, ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }
+          },
+          plugins: {
+            legend: { position: 'top', labels: { color: '#8b949e', font: { size: 11 } } },
+            tooltip: { mode: 'index' }
+          }
+        }
+      });
+
+      // 4) 연령대별 매출 합계
+      const ageCols = ['age_10', 'age_20', 'age_30', 'age_40', 'age_50', 'age_60'];
+      const ageLabels = ['10대', '20대', '30대', '40대', '50대', '60대+'];
+      const ageTotals = ageCols.map(k =>
+        DATA.dong_data.reduce((s, d) => s + (d[k] || 0), 0) / 1e8
+      );
+
+      new Chart(document.getElementById('chartAge'), {
+        type: 'bar',
+        data: {
+          labels: ageLabels,
+          datasets: [{
+            data: ageTotals,
+            backgroundColor: ['#FF6B6B', '#FFE66D', '#4ECDC4', '#58a6ff', '#bc8cff', '#A8E6CF'],
+            borderRadius: 6,
+          }]
+        },
+        options: chartOpts('매출(억원)')
+      });
+    }
+
+    function chartOpts(yLabel) {
+      return {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#21262d', titleColor: '#e6edf3', bodyColor: '#8b949e' }
+        },
+        scales: {
+          x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#21262d' } },
+          y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }
+        }
+      };
+    }
+
+    // ══════════════════════════════════════════════
+    //  지도 초기화
+    // ══════════════════════════════════════════════
+    function initMap() {
+      leafletMap = L.map('map').setView([37.5665, 126.9780], 11);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+      }).addTo(leafletMap);
+
+      DATA.brands.forEach(brand => {
+        activeFilters.add(brand);
+        markerLayers[brand] = L.layerGroup().addTo(leafletMap);
+      });
+
+      DATA.map_points.forEach(pt => {
+        const color = DATA.brand_colors[pt.brand] || '#888';
+        const marker = L.circleMarker([pt.lat, pt.lng], {
+          radius: 6, fillColor: color, color: '#fff',
+          weight: 1.5, opacity: 1, fillOpacity: 0.85
+        }).bindPopup(`
+      <div style="font-family:'Noto Sans KR',sans-serif;min-width:140px">
+        <div style="font-weight:700;color:${color};margin-bottom:4px">${pt.brand}</div>
+        <div style="font-size:.85rem">${pt.name}</div>
+      </div>
+    `);
+        markerLayers[pt.brand].addLayer(marker);
+      });
+
+      updateMapStats();
+    }
+
+    function setupBrandFilters() {
+      const container = document.getElementById('brandFilters');
+      container.innerHTML = DATA.brands.map(brand => {
+        const color = DATA.brand_colors[brand];
+        const cnt = DATA.brand_stats[brand].map_count;
+        return `
+      <button class="brand-filter-btn active" data-brand="${brand}"
+        style="color:${color}" onclick="toggleBrandFilter('${brand}', this)">
+        <span class="dot" style="background:${color}"></span>
+        ${brand}
+        <span class="count">${cnt}</span>
+      </button>
+    `;
+      }).join('');
+    }
+
+    function toggleBrandFilter(brand, btn) {
+      if (activeFilters.has(brand)) {
+        activeFilters.delete(brand);
+        btn.classList.remove('active');
+        btn.style.opacity = '0.4';
+        if (leafletMap && markerLayers[brand]) leafletMap.removeLayer(markerLayers[brand]);
+      } else {
+        activeFilters.add(brand);
+        btn.classList.add('active');
+        btn.style.opacity = '1';
+        if (leafletMap && markerLayers[brand]) markerLayers[brand].addTo(leafletMap);
+      }
+      updateMapStats();
+    }
+
+    function updateMapStats() {
+      const visible = [...activeFilters].reduce((s, b) => s + (DATA.brand_stats[b]?.map_count || 0), 0);
+      document.getElementById('mapStats').innerHTML =
+        `표시 중: <strong style="color:var(--text)">${visible.toLocaleString()}</strong>개 매장`;
+    }
+
+    // ══════════════════════════════════════════════
+    //  행정동 테이블
+    // ══════════════════════════════════════════════
+    let dongSortKey = 'total_brand_count';
+    let dongSortAsc = false;
+
+    function renderDongTable() {
+      // 브랜드 필터 옵션
+      const sel = document.getElementById('dongBrandFilter');
+      DATA.brands.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b; opt.textContent = b;
+        sel.appendChild(opt);
+      });
+
+      document.getElementById('dongSearch').addEventListener('input', updateDongTable);
+      document.getElementById('dongBrandFilter').addEventListener('change', updateDongTable);
+      document.getElementById('dongSortBy').addEventListener('change', e => {
+        dongSortKey = e.target.value;
+        updateDongTable();
+      });
+
+      updateDongTable();
+    }
+
+    function updateDongTable() {
+      const search = document.getElementById('dongSearch').value.toLowerCase();
+      const brandFilter = document.getElementById('dongBrandFilter').value;
+
+      let rows = DATA.dong_data.filter(d => {
+        if (search && !d.dong_name.includes(search)) return false;
+        if (brandFilter && (d.brands[brandFilter] || 0) === 0) return false;
+        return true;
+      });
+
+      rows.sort((a, b) => {
+        const va = a[dongSortKey] ?? -1;
+        const vb = b[dongSortKey] ?? -1;
+        return dongSortAsc ? va - vb : vb - va;
+      });
+
+      const tbody = document.getElementById('dongTableBody');
+      tbody.innerHTML = rows.slice(0, 200).map(d => {
+        const score = d.attractiveness_score;
+        const scoreBar = score != null
+          ? `<div class="score-bar">
+           <div class="score-bar-inner" style="width:${Math.min(score, 100)}px"></div>
+           <span>${score.toFixed(1)}</span>
+         </div>`
+          : '-';
+        const sales = d.monthly_sales > 0 ? (d.monthly_sales / 1e8).toFixed(1) : '-';
+        // 평균 매출: 월 매출 / 카페 수 (만원 단위)
+        const avgSales = (d.monthly_sales > 0 && d.cafe_count > 0)
+          ? Math.round(d.monthly_sales / d.cafe_count / 1e4).toLocaleString()
+          : '-';
+
+        return `
+      <tr onclick="showDongDetail(${JSON.stringify(d).replace(/"/g, '&quot;')})" style="cursor:pointer">
+        <td><strong>${d.dong_name}</strong></td>
+        ${DATA.brands.map(b => {
+          const cnt = d.brands[b] || 0;
+          const color = DATA.brand_colors[b];
+          return `<td>${cnt > 0 ? `<span class="brand-pill" style="background:${color}20;color:${color}">${cnt}</span>` : '<span style="color:var(--text-sub)">-</span>'}</td>`;
+        }).join('')}
+        <td><strong>${d.total_brand_count}</strong></td>
+        <td>${scoreBar}</td>
+        <td>${sales}</td>
+        <td>${avgSales !== '-' ? avgSales + '만' : '-'}</td>
+      </tr>
+    `;
+      }).join('');
+    }
+
+    function showDongDetail(d) {
+      const detail = document.getElementById('dongDetail');
+      const scores = [
+        { label: '매력도', val: d.attractiveness_score, color: '#58a6ff' },
+        { label: '수요', val: d.demand_score, color: '#4ECDC4' },
+        { label: '경쟁', val: d.competition_score, color: '#FFE66D' },
+        { label: '비용', val: d.cost_score, color: '#A8E6CF' },
+      ];
+
+      detail.innerHTML = `
+    <h3>${d.dong_name}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      ${scores.map(s => `
+        <div style="background:var(--surface2);border-radius:8px;padding:10px">
+          <div style="font-size:.7rem;color:var(--text-sub)">${s.label} 점수</div>
+          <div style="font-size:1.2rem;font-weight:700;color:${s.color}">${s.val != null ? s.val.toFixed(1) : '-'}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="font-size:.8rem;color:var(--text-sub);margin-bottom:6px">
+      근로자: <strong style="color:var(--text)">${d.total_workers.toLocaleString()}</strong>명 
+      (여성 ${d.female_workers.toLocaleString()}명)
+    </div>
+    <div style="font-size:.8rem;color:var(--text-sub);margin-bottom:6px">
+      월 매출: <strong style="color:var(--text)">${d.monthly_sales > 0 ? (d.monthly_sales / 1e8).toFixed(1) + '억' : '-'}</strong>
+    </div>
+    <div style="font-size:.8rem;color:var(--text-sub);margin-bottom:6px">
+      평균 매출: <strong style="color:#4ECDC4">${(d.monthly_sales > 0 && d.cafe_count > 0) ? Math.round(d.monthly_sales / d.cafe_count / 1e4).toLocaleString() + '만원/점포' : '-'}</strong>
+    </div>
+    <div style="font-size:.8rem;color:var(--text-sub);margin-bottom:12px">
+      카페 수: <strong style="color:var(--text)">${d.cafe_count}</strong>개
+    </div>
+    <div style="font-size:.75rem;color:var(--text-sub);margin-bottom:6px">브랜드 현황</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      ${DATA.brands.map(b => {
+        const cnt = d.brands[b] || 0;
+        const color = DATA.brand_colors[b];
+        return `<span class="brand-pill" style="background:${color}${cnt > 0 ? '30' : '10'};color:${cnt > 0 ? color : 'var(--text-sub)'}">${b} ${cnt}</span>`;
+      }).join('')}
+    </div>
+  `;
+
+      // 연령대 차트 업데이트
+      const ageData = [d.age_10, d.age_20, d.age_30, d.age_40, d.age_50, d.age_60].map(v => (v || 0) / 1e6);
+      if (dongAgeChart) dongAgeChart.destroy();
+      dongAgeChart = new Chart(document.getElementById('chartDongAge'), {
+        type: 'bar',
+        data: {
+          labels: ['10대', '20대', '30대', '40대', '50대', '60대+'],
+          datasets: [{
+            data: ageData,
+            backgroundColor: ['#FF6B6B', '#FFE66D', '#4ECDC4', '#58a6ff', '#bc8cff', '#A8E6CF'],
+            borderRadius: 5,
+          }]
+        },
+        options: {
+          ...chartOpts('매출(백만)'),
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    // ══════════════════════════════════════════════
+    //  입지 추천
+    // ══════════════════════════════════════════════
+    function renderRecommend() {
+      const sel = document.getElementById('recBrandFilter');
+      DATA.brands.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b; opt.textContent = b;
+        sel.appendChild(opt);
+      });
+
+      document.getElementById('recBrandFilter').addEventListener('change', updateRecommend);
+      document.getElementById('recSortFilter').addEventListener('change', updateRecommend);
+      document.getElementById('recSearch').addEventListener('input', updateRecommend);
+
+      updateRecommend();
+    }
+
+    function updateRecommend() {
+      const brandFilter = document.getElementById('recBrandFilter').value;
+      const sortKey = document.getElementById('recSortFilter').value;
+      const search = document.getElementById('recSearch').value.toLowerCase();
+
+      let items = DATA.recommend_top.filter(r => {
+        if (brandFilter && r.brand !== brandFilter) return false;
+        if (search && !r.dong_name.includes(search)) return false;
+        return true;
+      });
+
+      items.sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0));
+      document.getElementById('recCount').textContent = `${items.length}개 결과`;
+
+      const grid = document.getElementById('recommendGrid');
+      grid.innerHTML = items.slice(0, 60).map((r, i) => {
+        const color = DATA.brand_colors[r.brand];
+        const scoreColor = r.attractiveness_score > 60 ? '#4ECDC4' : r.attractiveness_score > 40 ? '#FFE66D' : '#FF6B6B';
+        return `
+      <div class="rec-card" style="border-top:3px solid ${color}">
+        <div class="rec-rank">#${i + 1} 추천</div>
+        <div class="rec-dong">${r.dong_name}</div>
+        <div class="rec-brand">
+          <span class="brand-pill" style="background:${color}25;color:${color}">${r.brand}</span>
+          <span style="font-size:.75rem;color:var(--text-sub);margin-left:4px">미진출 지역</span>
+        </div>
+        <div class="rec-scores">
+          <div class="rec-score-item">
+            <div class="label">매력도 점수</div>
+            <div class="value" style="color:${scoreColor}">${r.attractiveness_score?.toFixed(1) ?? '-'}</div>
+          </div>
+          <div class="rec-score-item">
+            <div class="label">수요 점수</div>
+            <div class="value" style="color:#4ECDC4">${r.demand_score?.toFixed(1) ?? '-'}</div>
+          </div>
+          <div class="rec-score-item">
+            <div class="label">경쟁 점수</div>
+            <div class="value" style="color:#FFE66D">${r.competition_score?.toFixed(1) ?? '-'}</div>
+          </div>
+          <div class="rec-score-item">
+            <div class="label">비용 점수</div>
+            <div class="value" style="color:#A8E6CF">${r.cost_score?.toFixed(1) ?? '-'}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:.75rem;color:var(--text-sub)">
+          근로자 ${r.total_workers?.toLocaleString() ?? '-'}명 · 
+          카페 ${r.cafe_count ?? '-'}개 · 
+          월매출 ${r.monthly_sales > 0 ? (r.monthly_sales / 1e8).toFixed(1) + '억' : '-'}
+        </div>
+      </div>
+    `;
+      }).join('');
+    }
+
+    // ══════════════════════════════════════════════
+    //  시작
+    // ══════════════════════════════════════════════
+    loadData().catch(err => {
+      document.querySelector('main').innerHTML = `
+    <div class="loading">
+      ⚠️ 데이터 로드 실패: ${err.message}<br>
+      <small style="margin-top:8px;display:block">preprocess.py를 먼저 실행해주세요</small>
+    </div>
+  `;
+    });
+  </script>
+</body>
+
+</html>
