@@ -601,25 +601,25 @@ elif selected_tab == "⭐ 입지 추천":
                         <div style="background:#21262d;border-radius:6px;padding:8px">
                           <div style="font-size:.65rem;color:#8b949e">매력도</div>
                           <div style="font-size:1.1rem;font-weight:700;color:{score_color}">
-                            {score:.1f if score else '-'}
+                            {f"{score:.1f}" if score else "-"}
                           </div>
                         </div>
                         <div style="background:#21262d;border-radius:6px;padding:8px">
                           <div style="font-size:.65rem;color:#8b949e">수요</div>
                           <div style="font-size:1.1rem;font-weight:700;color:#4ECDC4">
-                            {r['demand_score']:.1f if r.get('demand_score') else '-'}
+                            {f"{r['demand_score']:.1f}" if r.get('demand_score') else "-"}
                           </div>
                         </div>
                         <div style="background:#21262d;border-radius:6px;padding:8px">
                           <div style="font-size:.65rem;color:#8b949e">경쟁</div>
                           <div style="font-size:1.1rem;font-weight:700;color:#FFE66D">
-                            {r['competition_score']:.1f if r.get('competition_score') else '-'}
+                            {f"{r['competition_score']:.1f}" if r.get('competition_score') else "-"}
                           </div>
                         </div>
                         <div style="background:#21262d;border-radius:6px;padding:8px">
                           <div style="font-size:.65rem;color:#8b949e">비용</div>
                           <div style="font-size:1.1rem;font-weight:700;color:#A8E6CF">
-                            {r['cost_score']:.1f if r.get('cost_score') else '-'}
+                            {f"{r['cost_score']:.1f}" if r.get('cost_score') else "-"}
                           </div>
                         </div>
                       </div>
